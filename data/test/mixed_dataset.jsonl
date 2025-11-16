@@ -1,0 +1,100 @@
+{"problem": "What is the capital of Japan?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Tokyo"}
+{"problem": "Write a function that counts vowels in a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in 'aeiou')"}
+{"problem": "What is 77 + 25?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "102"}
+{"problem": "How many continents are there?", "problem_type": "qa", "tag": "drop", "ground_truth": "7"}
+{"problem": "What is 59 \u00d7 2?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "118"}
+{"problem": "What is 2 \u00d7 14?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "28"}
+{"problem": "What is 6 \u00f7 44?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "0"}
+{"problem": "What year did World War II end?", "problem_type": "qa", "tag": "drop", "ground_truth": "1945"}
+{"problem": "What is 10 \u00f7 15?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "0"}
+{"problem": "Write a function that reverses a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def reverse_string(s):\n    return s[::-1]"}
+{"problem": "What is the capital of Japan?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Tokyo"}
+{"problem": "Write a function that reverses a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def reverse_string(s):\n    return s[::-1]"}
+{"problem": "Write a function that returns the sum of two numbers.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def add(a, b):\n    return a + b"}
+{"problem": "Write a function that counts vowels in a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in 'aeiou')"}
+{"problem": "Write a function that squares a number.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def square(x):\n    return x * x"}
+{"problem": "Write a function that checks if a string is empty.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def is_empty(s):\n    return len(s) == 0"}
+{"problem": "What is 74 \u00f7 8?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "9"}
+{"problem": "What is the speed of light?", "problem_type": "qa", "tag": "drop", "ground_truth": "299792458 meters per second"}
+{"problem": "What is the capital of France?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Paris"}
+{"problem": "What is 26 - 1?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "25"}
+{"problem": "What is 58 \u00f7 14?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "4"}
+{"problem": "What is 94 \u00d7 31?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "2914"}
+{"problem": "What is 56 \u00d7 22?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "1232"}
+{"problem": "Write a function that checks if a string is empty.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def is_empty(s):\n    return len(s) == 0"}
+{"problem": "What is 18 - 27?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "-9"}
+{"problem": "Write a function that checks if a number is even.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def is_even(n):\n    return n % 2 == 0"}
+{"problem": "Write a function that reverses a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def reverse_string(s):\n    return s[::-1]"}
+{"problem": "Write a function that checks if a number is even.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def is_even(n):\n    return n % 2 == 0"}
+{"problem": "What is the chemical symbol for water?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "H2O"}
+{"problem": "What is 86 + 22?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "108"}
+{"problem": "Write a function that multiplies all numbers in a list.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def multiply_list(lst):\n    result = 1\n    for num in lst:\n        result *= num\n    return result"}
+{"problem": "Write a function that checks if a string is empty.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def is_empty(s):\n    return len(s) == 0"}
+{"problem": "What is the largest planet in our solar system?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Jupiter"}
+{"problem": "What is the largest planet in our solar system?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Jupiter"}
+{"problem": "What is 24 + 48?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "72"}
+{"problem": "Write a function that checks if a string is empty.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def is_empty(s):\n    return len(s) == 0"}
+{"problem": "What is the largest planet in our solar system?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Jupiter"}
+{"problem": "Write a function that returns the maximum of two numbers.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def max_of_two(a, b):\n    return a if a > b else b"}
+{"problem": "Who painted the Mona Lisa?", "problem_type": "qa", "tag": "drop", "ground_truth": "Leonardo da Vinci"}
+{"problem": "Write a function that reverses a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def reverse_string(s):\n    return s[::-1]"}
+{"problem": "What year did World War II end?", "problem_type": "qa", "tag": "drop", "ground_truth": "1945"}
+{"problem": "What is 67 - 6?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "61"}
+{"problem": "Who wrote 'Romeo and Juliet'?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "William Shakespeare"}
+{"problem": "Write a function that counts vowels in a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in 'aeiou')"}
+{"problem": "What is 54 \u00f7 4?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "13"}
+{"problem": "Write a function that reverses a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def reverse_string(s):\n    return s[::-1]"}
+{"problem": "What is 2 \u00d7 34?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "68"}
+{"problem": "What is 46 - 45?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "1"}
+{"problem": "Write a function that counts vowels in a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in 'aeiou')"}
+{"problem": "What is 16 \u00f7 49?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "0"}
+{"problem": "What year did World War II end?", "problem_type": "qa", "tag": "drop", "ground_truth": "1945"}
+{"problem": "What is 5 \u00f7 23?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "0"}
+{"problem": "What is 76 - 33?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "43"}
+{"problem": "What is 84 + 16?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "100"}
+{"problem": "What is 49 \u00f7 49?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "1"}
+{"problem": "Write a function that squares a number.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def square(x):\n    return x * x"}
+{"problem": "What is 9 \u00d7 26?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "234"}
+{"problem": "Write a function that returns the first element of a list.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def first_element(lst):\n    return lst[0] if lst else None"}
+{"problem": "What is 65 - 18?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "47"}
+{"problem": "What is 55 + 32?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "87"}
+{"problem": "What is 95 - 8?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "87"}
+{"problem": "Write a function that returns the first element of a list.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def first_element(lst):\n    return lst[0] if lst else None"}
+{"problem": "What is 72 + 50?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "122"}
+{"problem": "What is 61 - 18?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "43"}
+{"problem": "What is 69 \u00f7 26?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "2"}
+{"problem": "Who wrote 'Romeo and Juliet'?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "William Shakespeare"}
+{"problem": "What is 94 \u00d7 36?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "3384"}
+{"problem": "What is 34 + 2?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "36"}
+{"problem": "What is 29 - 28?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "1"}
+{"problem": "What is the largest ocean on Earth?", "problem_type": "qa", "tag": "drop", "ground_truth": "Pacific Ocean"}
+{"problem": "Write a function that reverses a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def reverse_string(s):\n    return s[::-1]"}
+{"problem": "What is 89 \u00d7 46?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "4094"}
+{"problem": "Write a function that counts vowels in a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in 'aeiou')"}
+{"problem": "What is 63 + 19?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "82"}
+{"problem": "What year did World War II end?", "problem_type": "qa", "tag": "drop", "ground_truth": "1945"}
+{"problem": "Write a function that returns the sum of two numbers.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def add(a, b):\n    return a + b"}
+{"problem": "How many continents are there?", "problem_type": "qa", "tag": "drop", "ground_truth": "7"}
+{"problem": "What is the capital of France?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Paris"}
+{"problem": "What is the largest planet in our solar system?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Jupiter"}
+{"problem": "What is the chemical symbol for water?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "H2O"}
+{"problem": "What is the speed of light?", "problem_type": "qa", "tag": "drop", "ground_truth": "299792458 meters per second"}
+{"problem": "Write a function that reverses a string.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def reverse_string(s):\n    return s[::-1]"}
+{"problem": "Write a function that squares a number.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def square(x):\n    return x * x"}
+{"problem": "What is the capital of Japan?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Tokyo"}
+{"problem": "Write a function that returns the maximum of two numbers.", "problem_type": "code", "tag": "humaneval", "ground_truth": "def max_of_two(a, b):\n    return a if a > b else b"}
+{"problem": "What year did World War II end?", "problem_type": "qa", "tag": "drop", "ground_truth": "1945"}
+{"problem": "How many continents are there?", "problem_type": "qa", "tag": "drop", "ground_truth": "7"}
+{"problem": "Who wrote 'Romeo and Juliet'?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "William Shakespeare"}
+{"problem": "What is 75 - 43?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "32"}
+{"problem": "What is the capital of France?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Paris"}
+{"problem": "What is 19 \u00d7 38?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "722"}
+{"problem": "Write a function that multiplies all numbers in a list.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def multiply_list(lst):\n    result = 1\n    for num in lst:\n        result *= num\n    return result"}
+{"problem": "What is 88 - 34?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "54"}
+{"problem": "What is 98 \u00f7 37?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "2"}
+{"problem": "Who painted the Mona Lisa?", "problem_type": "qa", "tag": "drop", "ground_truth": "Leonardo da Vinci"}
+{"problem": "What is the capital of France?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "Paris"}
+{"problem": "What is the chemical symbol for water?", "problem_type": "qa", "tag": "hotpotqa", "ground_truth": "H2O"}
+{"problem": "What is 56 \u00f7 8?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "7"}
+{"problem": "Write a function that squares a number.", "problem_type": "code", "tag": "mbpp", "ground_truth": "def square(x):\n    return x * x"}
+{"problem": "What is 94 \u00f7 8?", "problem_type": "math", "tag": "gsm8k", "ground_truth": "11"}
