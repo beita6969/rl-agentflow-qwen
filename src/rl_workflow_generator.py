@@ -111,7 +111,7 @@ class RLWorkflowGenerator:
         }
 
     def _build_generation_prompt(self, problem: str, problem_type: str) -> str:
-        """构建提示词，要求生成JSON格式（prompts + graph_code）- 借鉴AFlow风格"""
+        """构建提示词，要求生成JSON格式（prompts + graph_code）- 明确operator接口，让RL学习如何使用"""
 
         prompt = f"""You must generate EXACTLY ONE valid JSON object. Do not generate examples, explanations, or multiple JSONs.
 
@@ -130,34 +130,37 @@ CRITICAL REQUIREMENTS:
 2. These prompts will be learned by RL - make them problem-specific and effective
 3. The "graph_code" should reference prompts via self.prompts["OperatorName"]
 
-Available Operators:
+Available Operators (IMPORTANT: All operators return dict, access fields using ['key']):
 
 1. Custom(llm) - Most flexible, for any custom task
    Call: await self.custom(input=str, instruction=str)
-   Returns: {{'response': str}}
+   Returns: dict with key 'response'
+   Access result: response['response']
 
 2. AnswerGenerate(llm) - Step-by-step reasoning (NO instruction parameter!)
    Call: await self.answer_generate(input=str)
-   Returns: {{'thought': str, 'answer': str}}
+   Returns: dict with keys 'thought' and 'answer'
+   Access result: response['answer']
 
 3. Programmer(llm) - Auto-generate and execute Python code
    Call: await self.programmer(problem=str, analysis=str)
-   Returns: {{'code': str, 'output': str}}
+   Returns: dict with keys 'code' and 'output'
+   Access result: response['output'] (this is the execution result!)
 
 4. Review(llm) - Reviews and provides feedback
    Call: await self.review(problem=str, solution=str)
-   Returns: {{'review_result': str, 'feedback': str}}
+   Returns: dict with keys 'review_result' and 'feedback'
 
 5. Revise(llm) - Revises solution based on feedback
    Call: await self.revise(problem=str, solution=str, feedback=str)
-   Returns: {{'solution': str}}
+   Returns: dict with key 'solution'
 
 EXAMPLE OUTPUT:
 {{
     "prompts": {{
         "Custom": "用代数方法一步步解决这个数学问题，最后用boxed格式给出答案"
     }},
-    "graph_code": "import workspace.{problem_type}.workflows.template.operator as operator\\nfrom scripts.async_llm import create_llm_instance\\nfrom scripts.evaluator import DatasetType\\n\\nclass Workflow:\\n    def __init__(self, name: str, llm_config, dataset: DatasetType):\\n        self.name = name\\n        self.dataset = dataset\\n        self.llm = create_llm_instance(llm_config)\\n        self.custom = operator.Custom(self.llm)\\n        self.prompts = None  # Will be injected at runtime\\n\\n    async def __call__(self, problem: str):\\n        solution = await self.custom(input=problem, instruction=self.prompts['Custom'])\\n        return solution['response'], self.llm.get_usage_summary()['total_cost']"
+    "graph_code": "import workspace.{problem_type}.workflows.template.operator as operator\\nfrom scripts.async_llm import create_llm_instance\\nfrom scripts.evaluator import DatasetType\\n\\nclass Workflow:\\n    def __init__(self, name: str, llm_config, dataset: DatasetType):\\n        self.name = name\\n        self.dataset = dataset\\n        self.llm = create_llm_instance(llm_config)\\n        self.custom = operator.Custom(self.llm)\\n        self.prompts = None  # Will be injected at runtime\\n\\n    async def __call__(self, problem: str):\\n        response = await self.custom(input=problem, instruction=self.prompts['Custom'])\\n        return response['response'], self.llm.get_usage_summary()['total_cost']"
 }}
 
 Generate the JSON:"""
