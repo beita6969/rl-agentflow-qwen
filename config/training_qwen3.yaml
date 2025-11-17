@@ -4,9 +4,9 @@
 exp_name: "aflow_grpo_qwen3"
 output_dir: "checkpoints_qwen3"
 log_dir: "logs_qwen3"
-max_steps: 500  # 总训练步数
+max_steps: 500  # 总训练步数 (快速更新模式)
 save_every: 50  # 每N步保存一次
-eval_every: 25  # 每N步评估一次
+eval_every: 5  # 每N步评估一次（每5步测试）
 log_every: 5    # 每N步记录一次
 
 # GRPO算法配置
@@ -20,8 +20,8 @@ clip_range: 0.2
 gamma: 1.0                         # 折扣因子
 lambda_gae: 0.95                   # GAE lambda
 
-# Batch配置 - 方案A: 大幅增加显存使用 (目标: 60-70GB/80GB)
-rollout_batch_size: 20             # 每批问题数（实际样本=20*4=80）大幅增加
+# Batch配置 - 快速更新模式: 与Qwen2.5保持一致
+rollout_batch_size: 4              # 每批问题数 (快速更新: 每16个工作流样本更新一次, 与Qwen2.5一致)
 prompt_max_length: 3072            # 增加序列长度
 response_max_length: 5120          # 增加输出长度
 

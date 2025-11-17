@@ -111,9 +111,9 @@ class RLWorkflowGenerator:
         }
 
     def _build_generation_prompt(self, problem: str, problem_type: str) -> str:
-        """构建提示词，要求生成JSON格式（prompts + graph_code）"""
+        """构建提示词，要求生成JSON格式（prompts + graph_code）- 借鉴AFlow风格"""
 
-        prompt = f"""Generate a workflow specification in JSON format with TWO fields: "prompts" and "graph_code".
+        prompt = f"""You must generate EXACTLY ONE valid JSON object. Do not generate examples, explanations, or multiple JSONs.
 
 TASK: Solve this {problem_type} problem: {problem}
 
@@ -160,7 +160,7 @@ EXAMPLE OUTPUT:
     "graph_code": "import workspace.{problem_type}.workflows.template.operator as operator\\nfrom scripts.async_llm import create_llm_instance\\nfrom scripts.evaluator import DatasetType\\n\\nclass Workflow:\\n    def __init__(self, name: str, llm_config, dataset: DatasetType):\\n        self.name = name\\n        self.dataset = dataset\\n        self.llm = create_llm_instance(llm_config)\\n        self.custom = operator.Custom(self.llm)\\n        self.prompts = None  # Will be injected at runtime\\n\\n    async def __call__(self, problem: str):\\n        solution = await self.custom(input=problem, instruction=self.prompts['Custom'])\\n        return solution['response'], self.llm.get_usage_summary()['total_cost']"
 }}
 
-Now generate the JSON for the problem: {problem}"""
+Generate the JSON:"""
 
         return prompt
 
@@ -197,7 +197,7 @@ Now generate the JSON for the problem: {problem}"""
         # Tokenize
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
-        # 生成
+        # 生成 (优化参数防止重复)
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
@@ -205,6 +205,7 @@ Now generate the JSON for the problem: {problem}"""
                 temperature=temperature,
                 top_p=self.config.get('top_p', 0.95),
                 top_k=self.config.get('top_k', 50),
+                repetition_penalty=self.config.get('repetition_penalty', 1.2),  # 防止重复生成
                 do_sample=True,
                 pad_token_id=self.tokenizer.eos_token_id
             )
@@ -247,13 +248,28 @@ Now generate the JSON for the problem: {problem}"""
         print(generated_text)
         print(f"{'='*60}\n")
 
-        # 尝试提取JSON
+        # 使用括号计数法提取第一个完整的JSON对象
         json_start = generated_text.find("{")
-        json_end = generated_text.rfind("}")
+
+        if json_start != -1:
+            # 从第一个'{'开始计数，找到匹配的'}'
+            bracket_count = 0
+            json_end = -1
+
+            for i in range(json_start, len(generated_text)):
+                if generated_text[i] == '{':
+                    bracket_count += 1
+                elif generated_text[i] == '}':
+                    bracket_count -= 1
+                    if bracket_count == 0:
+                        json_end = i
+                        break
+
+            if json_end != -1:
+                json_text = generated_text[json_start:json_end+1]
+                print(f"✅ 使用括号计数法提取JSON (长度: {len(json_text)} 字符)")
 
         if json_start != -1 and json_end != -1 and json_end > json_start:
-            json_text = generated_text[json_start:json_end+1]
-
             try:
                 # 解析JSON
                 workflow_spec = json.loads(json_text)
