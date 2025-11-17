@@ -1,6 +1,6 @@
 # AFlow + ROLL 深度融合项目
 
-**基于强化学习的工作流自动优化系统**
+**基于强化学习的工作流自动优化系统 (v2.0 - 混合格式)**
 
 ## 🎯 项目概述
 
@@ -10,13 +10,37 @@
 - **ROLL (Alibaba)**: 强化学习框架，使用GRPO算法微调Qwen2.5-7B
 - **AgentFlow (lupantech)**: 参考的模块化Agent架构
 
-### 核心创新
+### 核心创新 🚀
 
 用**强化学习驱动的Qwen2.5-7B模型**替换AFlow中的API调用和随机算法，实现：
+- ✅ **混合格式架构** (v2.0新特性) - Prompts (JSON) + Graph Code (Python)
 - ✅ **在线学习**（Online Learning）- 实时优化工作流
-- ✅ **自适应提示词生成** - RL模型学习优化提示词
+- ✅ **自适应提示词优化** - Prompts通过RL独立优化
+- ✅ **Runtime动态注入** - 运行时注入优化后的prompts
 - ✅ **智能算子调用控制** - 模型决定算子序列和边的关系
 - ✅ **迭代升级** - 通过强化学习不断改进
+
+### v2.0 混合格式优势
+
+**为什么分离Prompts和Graph Code？**
+
+传统方法将提示词硬编码在Python代码中，导致RL难以优化。v2.0采用混合格式：
+
+```json
+{
+    "prompts": {
+        "Custom": "用代数方法一步步解决这个数学问题...",
+        "Review": "检查解题步骤的完整性和正确性..."
+    },
+    "graph_code": "class Workflow: ..."
+}
+```
+
+**优势：**
+- 📊 **Prompts (JSON)**: RL可直接优化，针对每个问题生成专用指令
+- 🔧 **Graph Code (Python)**: 稳定的执行逻辑，AFlow原生支持
+- 🎯 **Runtime注入**: `workflow.prompts = prompts` 实现动态替换
+- 🔄 **向后兼容**: 支持纯代码模式fallback
 
 ---
 
@@ -35,9 +59,9 @@ integrated_aflow_roll/
 │   ├── training.yaml               # 训练配置
 │   └── aflow_llm.yaml             # AFlow LLM配置（OpenAI API）
 ├── data/
-│   ├── train/mixed_dataset.jsonl  # 训练集（80样本）
-│   ├── val/mixed_dataset.jsonl    # 验证集（10样本）
-│   └── test/mixed_dataset.jsonl   # 测试集（10样本）
+│   ├── train/mixed_dataset.jsonl  # 训练集（1000样本）
+│   ├── val/mixed_dataset.jsonl    # 验证集（100样本）
+│   └── test/mixed_dataset.jsonl   # 测试集（100样本）
 ├── checkpoints/                    # 模型检查点
 ├── logs/                          # 训练日志
 ├── scripts/
@@ -53,41 +77,53 @@ integrated_aflow_roll/
 
 ## ✅ 已完成功能
 
-### 1. GPU管理 ✓
-- **自动清理GPU 2-3**（保护代理进程PID 3819483）
-- **环境验证**（检查GPU可用性和受保护进程）
-- **CUDA设备隔离**（仅使用指定GPU）
+### 1. 混合格式工作流生成器 ✓ (v2.0)
+- **JSON + Python混合输出**（Prompts可独立优化）
+- **Qwen2.5-7B + LoRA**（rank=64，训练1%参数）
+- **问题特定Prompts**（针对每个问题生成专用指令）
+- **Graph Code生成**（完整Workflow类Python代码）
+- **语法验证**（ast.parse检查）
+- **向后兼容**（支持纯代码模式fallback）
 
-### 2. 数据管理 ✓
+### 2. Runtime Prompts注入器 ✓ (v2.0)
+- **动态注入机制**（`workflow.prompts = prompts`）
+- **三层Fallback**（实例化→执行→默认工作流）
+- **无缝集成AFlow算子**（使用现成代码）
+- **动态工作流加载**（从Python代码创建类）
+- **超时保护**（默认180秒）
+- **gpt-4o-mini执行**（使用OpenAI API）
+
+### 3. 5维度奖励计算器 ✓ (v2.0)
+- **多维度奖励**：
+  - 正确性（65%）：数学/代码/QA不同策略
+  - 效率（15%）：基于API成本
+  - 简洁性（10%）：基于执行时间和算子数
+  - 格式（5%）：ROLL风格格式奖励
+  - 重复惩罚（5%）：避免重复内容
+- **奖励归一化**：[-10, 10]范围
+- **细粒度评分**：更精确的反馈信号
+
+### 4. 数据管理 ✓
+- **大规模数据集**（1200样本：1000训练/100验证/100测试）
 - **混合数据集**（数学、代码、QA三种类型）
 - **按比例采样**（数学40%、代码30%、QA30%）
 - **在线循环采样**（无限迭代，自动重新打乱）
+- **快速评估**（随机采样50样本加速测试）
 
-### 3. RL工作流生成器 ✓
-- **Qwen2.5-7B + LoRA**（仅训练1%参数）
-- **直接生成Python代码**（完整Workflow类）
-- **语法验证**（ast.parse检查）
-- **默认工作流回退**（生成失败时使用）
-
-### 4. AFlow执行适配器 ✓
-- **无缝集成AFlow算子**（使用现成代码）
-- **动态工作流加载**（从Python代码创建类）
-- **超时保护**（默认300秒）
-- **gpt-4o-mini执行**（使用OpenAI API）
-
-### 5. 奖励计算器 ✓
-- **多维度奖励**：
-  - 正确性（70%）：数学/代码/QA不同策略
-  - 效率（20%）：基于API成本
-  - 简洁性（10%）：基于执行时间和算子数
-- **奖励归一化**：[-10, 10]范围
-
-### 6. GRPO训练器 ✓
-- **在线学习模式**：ppo_epochs=1, no replay buffer
+### 5. GRPO训练器 ✓
+- **快速更新模式**（batch_size=4，每16个工作流更新一次）
+- **在线学习**：ppo_epochs=1, no replay buffer
 - **GRPO算法**：组相对优势，降低方差
 - **梯度累积**：支持大batch训练
 - **KL正则化**：防止策略偏离
 - **检查点保存**：定期保存LoRA权重
+- **WandB集成**：实时监控训练指标
+
+### 6. GPU管理 ✓
+- **单GPU训练**（支持GPU 2单卡模式）
+- **进程保护**（白名单保护指定PID）
+- **环境验证**（检查GPU可用性）
+- **CUDA设备隔离**（仅使用指定GPU）
 
 ---
 
@@ -96,16 +132,13 @@ integrated_aflow_roll/
 ### 前置条件
 
 ```bash
-# 1. 确保GPU 2-3可用
+# 1. 确保GPU可用
 nvidia-smi
 
-# 2. 代理进程正在运行
-ps -p 3819483
-
-# 3. 安装依赖（如果还没安装）
+# 2. 安装依赖（如果还没安装）
 cd /home/yijia/.claude/11/ROLL && pip install -e .
 cd /home/yijia/.claude/11/AFlow && pip install -r requirements.txt
-pip install transformers accelerate peft deepspeed torch
+pip install transformers accelerate peft torch wandb
 ```
 
 ### 测试系统
@@ -120,11 +153,11 @@ python3 test_integration.py
 ### 启动训练
 
 ```bash
-# 方法1：使用环境变量
-CUDA_VISIBLE_DEVICES=2,3 python3 train.py
+# 单GPU训练（推荐）
+CUDA_VISIBLE_DEVICES=2 python3 train.py --config config/training.yaml
 
-# 方法2：自动GPU管理（推荐）
-python3 train.py --config config/training.yaml
+# 多GPU训练（如需要）
+CUDA_VISIBLE_DEVICES=2,3 python3 train.py --config config/training.yaml
 ```
 
 ### 监控训练
@@ -158,15 +191,23 @@ python3 inference.py \
 ### 训练配置 (`config/training.yaml`)
 
 ```yaml
-# 核心参数
+# 实验配置
+exp_name: "aflow_grpo_hybrid_prompts"   # v2.0混合格式版本
 max_steps: 500                          # 总训练步数
-rollout_batch_size: 8                   # 每批问题数
-num_return_sequences_in_group: 8        # GRPO组大小
-learning_rate: 1.0e-5                   # 学习率
+eval_every: 5                           # 每5步评估一次
+save_every: 50                          # 每50步保存检查点
 
-# GPU配置
-device_mapping: [2, 3]                  # 仅使用GPU 2-3
-protected_pids: [3819483]               # 受保护的进程
+# GRPO算法配置（快速更新模式）
+rollout_batch_size: 4                   # 每批问题数（16个工作流/次更新）
+num_return_sequences_in_group: 4        # GRPO组大小
+learning_rate: 1.0e-5                   # 学习率
+ppo_epochs: 1                           # 在线学习：每batch只训练一次
+
+# GPU配置（单GPU模式）
+device_mapping: [0]                     # 逻辑设备0
+physical_gpus: [2]                      # 实际使用的物理GPU 2
+num_gpus: 1                             # 单GPU训练
+protected_pids: [3819483]               # 受保护的进程（可选）
 
 # 数据集混合比例
 domain_ratios:
@@ -174,10 +215,23 @@ domain_ratios:
   code: 0.3                             # 30%代码
   qa: 0.3                               # 30%QA
 
-# LoRA配置
-lora_rank: 32
-lora_alpha: 32
+# LoRA配置（方案A: 增加参数量）
+lora_rank: 64                           # 从32→64 (4倍参数)
+lora_alpha: 64                          # alpha通常等于rank
 lora_target_modules: "q_proj,k_proj,v_proj,o_proj"
+
+# 奖励配置（5维度）
+reward_weights:
+  correctness: 0.65                     # 正确性权重
+  efficiency: 0.15                      # 效率权重（成本）
+  simplicity: 0.10                      # 简洁性权重（算子数）
+  format: 0.05                          # 格式奖励（ROLL风格）
+  repetition: 0.05                      # 重复惩罚（ROLL风格）
+
+# WandB监控
+use_wandb: true
+wandb_project: "agent-prompt"
+wandb_entity: "yao110002-sdfsdfsdfsdf-com"
 ```
 
 ### AFlow LLM配置 (`config/aflow_llm.yaml`)

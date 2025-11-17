@@ -111,11 +111,24 @@ class RLWorkflowGenerator:
         }
 
     def _build_generation_prompt(self, problem: str, problem_type: str) -> str:
-        """构建提示词，明确算子 API"""
+        """构建提示词，要求生成JSON格式（prompts + graph_code）"""
 
-        prompt = f"""Generate a Python Workflow class. Follow the exact template and API signatures.
+        prompt = f"""Generate a workflow specification in JSON format with TWO fields: "prompts" and "graph_code".
 
-CRITICAL: Only use operators listed below with their EXACT parameters!
+TASK: Solve this {problem_type} problem: {problem}
+
+OUTPUT FORMAT (JSON):
+{{
+    "prompts": {{
+        "OperatorName": "instruction string to optimize for this specific problem"
+    }},
+    "graph_code": "Python Workflow class code..."
+}}
+
+CRITICAL REQUIREMENTS:
+1. The "prompts" field contains instruction strings for each operator you use
+2. These prompts will be learned by RL - make them problem-specific and effective
+3. The "graph_code" should reference prompts via self.prompts["OperatorName"]
 
 Available Operators:
 
@@ -123,33 +136,31 @@ Available Operators:
    Call: await self.custom(input=str, instruction=str)
    Returns: {{'response': str}}
 
-2. AnswerGenerate(llm) - Step-by-step reasoning
-   Call: await self.answer_generate(input=str)  ← NO instruction parameter!
+2. AnswerGenerate(llm) - Step-by-step reasoning (NO instruction parameter!)
+   Call: await self.answer_generate(input=str)
    Returns: {{'thought': str, 'answer': str}}
 
 3. Programmer(llm) - Auto-generate and execute Python code
    Call: await self.programmer(problem=str, analysis=str)
    Returns: {{'code': str, 'output': str}}
 
-Template (complete the __call__ method):
+4. Review(llm) - Reviews and provides feedback
+   Call: await self.review(problem=str, solution=str)
+   Returns: {{'review_result': str, 'feedback': str}}
 
-import workspace.{problem_type}.workflows.template.operator as operator
-from scripts.async_llm import create_llm_instance
-from scripts.evaluator import DatasetType
+5. Revise(llm) - Revises solution based on feedback
+   Call: await self.revise(problem=str, solution=str, feedback=str)
+   Returns: {{'solution': str}}
 
-class Workflow:
-    def __init__(self, name: str, llm_config, dataset: DatasetType):
-        self.name = name
-        self.dataset = dataset
-        self.llm = create_llm_instance(llm_config)
-        # Example: self.custom = operator.Custom(self.llm)
+EXAMPLE OUTPUT:
+{{
+    "prompts": {{
+        "Custom": "用代数方法一步步解决这个数学问题，最后用boxed格式给出答案"
+    }},
+    "graph_code": "import workspace.{problem_type}.workflows.template.operator as operator\\nfrom scripts.async_llm import create_llm_instance\\nfrom scripts.evaluator import DatasetType\\n\\nclass Workflow:\\n    def __init__(self, name: str, llm_config, dataset: DatasetType):\\n        self.name = name\\n        self.dataset = dataset\\n        self.llm = create_llm_instance(llm_config)\\n        self.custom = operator.Custom(self.llm)\\n        self.prompts = None  # Will be injected at runtime\\n\\n    async def __call__(self, problem: str):\\n        solution = await self.custom(input=problem, instruction=self.prompts['Custom'])\\n        return solution['response'], self.llm.get_usage_summary()['total_cost']"
+}}
 
-    async def __call__(self, problem: str):
-        # Solve: {problem}
-        # MUST return (solution, cost) tuple
-        # Example: return solution['response'], self.llm.get_usage_summary()["total_cost"]
-        pass
-"""
+Now generate the JSON for the problem: {problem}"""
 
         return prompt
 
@@ -204,11 +215,12 @@ class Workflow:
             skip_special_tokens=True
         )
 
-        # 解析输出
-        workflow_code, is_valid, error = self._parse_workflow_code(generated_text, problem_type)
+        # 解析输出（期望JSON格式）
+        workflow_spec, is_valid, error = self._parse_workflow_output(generated_text, problem_type)
 
-        result = {
-            "workflow_code": workflow_code,
+        # 返回完整的workflow_spec（包含prompts和graph_code）
+        result = workflow_spec.copy()
+        result.update({
             "valid": is_valid,
             "error": error,
             "metadata": {
@@ -217,7 +229,7 @@ class Workflow:
                 "temperature": temperature,
                 "tokens_generated": outputs.shape[1] - inputs['input_ids'].shape[1]
             }
-        }
+        })
 
         if return_full_output:
             result["full_output"] = generated_text
@@ -225,54 +237,81 @@ class Workflow:
 
         return result
 
-    def _parse_workflow_code(self, generated_text: str, problem_type: str) -> Tuple[str, bool, Optional[str]]:
-        """解析生成的文本，提取并验证工作流代码"""
+    def _parse_workflow_output(self, generated_text: str, problem_type: str) -> Tuple[Dict, bool, Optional[str]]:
+        """解析生成的文本，提取并验证工作流规范（JSON格式）"""
 
         # DEBUG: 打印 Qwen 生成的原始文本
         print(f"\n{'='*60}")
         print(f"🔍 DEBUG: Qwen 生成的原始文本 (完整):")
         print(f"{'='*60}")
-        print(generated_text)  # 打印完整文本
+        print(generated_text)
         print(f"{'='*60}\n")
 
-        # 提取代码块
+        # 尝试提取JSON
+        json_start = generated_text.find("{")
+        json_end = generated_text.rfind("}")
+
+        if json_start != -1 and json_end != -1 and json_end > json_start:
+            json_text = generated_text[json_start:json_end+1]
+
+            try:
+                # 解析JSON
+                workflow_spec = json.loads(json_text)
+
+                # 验证必需字段
+                if "prompts" not in workflow_spec or "graph_code" not in workflow_spec:
+                    print(f"⚠️  JSON缺少必需字段 (prompts/graph_code)，使用默认工作流")
+                    return self._get_default_workflow(problem_type), False, "Missing required fields in JSON"
+
+                # 验证graph_code的语法
+                try:
+                    ast.parse(workflow_spec["graph_code"])
+                    is_valid = True
+                    error = None
+                except SyntaxError as e:
+                    print(f"⚠️  graph_code语法错误: {e}，使用默认工作流")
+                    return self._get_default_workflow(problem_type), False, f"Syntax error in graph_code: {str(e)}"
+
+                print(f"✅ 成功解析JSON工作流规范")
+                print(f"  Prompts: {list(workflow_spec['prompts'].keys())}")
+                return workflow_spec, is_valid, error
+
+            except json.JSONDecodeError as e:
+                print(f"⚠️  JSON解析失败: {e}")
+
+        # JSON解析失败，尝试提取纯代码（向后兼容）
+        print(f"⚠️  未找到有效JSON，尝试提取纯代码...")
         code_start = generated_text.find("```python")
         if code_start == -1:
-            # 没有markdown代码块，尝试直接查找class定义
             code_start = generated_text.find("class Workflow:")
             if code_start == -1:
-                print(f"⚠️  未找到 'class Workflow:'，使用默认工作流")
-                return self._get_default_workflow(problem_type), False, "No Workflow class found in output"
-
+                print(f"⚠️  未找到代码，使用默认工作流")
+                return self._get_default_workflow(problem_type), False, "No valid JSON or code found in output"
             code = generated_text[code_start:]
         else:
             code_start += len("```python\n")
             code_end = generated_text.find("```", code_start)
+            code = generated_text[code_start:code_end] if code_end != -1 else generated_text[code_start:]
 
-            if code_end == -1:
-                code = generated_text[code_start:]
-            else:
-                code = generated_text[code_start:code_end]
-
-        # 去除首尾空白
         code = code.strip()
 
-        # 验证语法
+        # 验证语法并包装为workflow_spec
         try:
             ast.parse(code)
-            is_valid = True
-            error = None
+            # 从代码中提取默认prompts（简化处理）
+            workflow_spec = {
+                "prompts": {"Custom": "Solve this problem step by step."},
+                "graph_code": code
+            }
+            print(f"✅ 使用纯代码模式（向后兼容）")
+            return workflow_spec, True, None
         except SyntaxError as e:
-            is_valid = False
-            error = f"Syntax error: {str(e)}"
-            # 返回默认工作流
-            code = self._get_default_workflow(problem_type)
+            print(f"⚠️  代码语法错误: {e}，使用默认工作流")
+            return self._get_default_workflow(problem_type), False, f"Syntax error: {str(e)}"
 
-        return code, is_valid, error
-
-    def _get_default_workflow(self, problem_type: str = "math") -> str:
-        """默认工作流（当生成失败时）"""
-        return f"""import workspace.{problem_type}.workflows.template.operator as operator
+    def _get_default_workflow(self, problem_type: str = "math") -> Dict:
+        """默认工作流（当生成失败时），返回dict格式"""
+        graph_code = f"""import workspace.{problem_type}.workflows.template.operator as operator
 from scripts.async_llm import create_llm_instance
 from scripts.evaluator import DatasetType
 
@@ -282,11 +321,20 @@ class Workflow:
         self.dataset = dataset
         self.llm = create_llm_instance(llm_config)
         self.custom = operator.Custom(self.llm)
+        self.prompts = None  # Will be injected at runtime
 
     async def __call__(self, problem: str):
-        solution = await self.custom(input=problem, instruction="Solve this problem step by step.")
+        instruction = self.prompts.get("Custom", "Solve this problem step by step.") if self.prompts else "Solve this problem step by step."
+        solution = await self.custom(input=problem, instruction=instruction)
         return solution['response'], self.llm.get_usage_summary()["total_cost"]
 """
+
+        return {
+            "prompts": {
+                "Custom": "Solve this problem step by step."
+            },
+            "graph_code": graph_code
+        }
 
 
 def test_generator():

@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import asyncio
 import numpy as np
 import yaml
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from tqdm import tqdm
@@ -183,19 +184,33 @@ class GRPOTrainer:
             trust_remote_code=True
         )
 
-        # 应用LoRA
+        # 应用LoRA或从checkpoint恢复
         if self.config.get('use_lora', True):
-            lora_config = LoraConfig(
-                r=self.config['lora_rank'],
-                lora_alpha=self.config['lora_alpha'],
-                target_modules=self.config['lora_target_modules'].split(','),
-                lora_dropout=self.config['lora_dropout'],
-                bias="none",
-                task_type="CAUSAL_LM"
-            )
-            self.model = get_peft_model(self.model, lora_config)
+            resume_from = self.config.get('resume_from_checkpoint', None)
 
-            print(f"✅ LoRA应用完成")
+            if resume_from and os.path.exists(resume_from):
+                # 从checkpoint恢复LoRA权重
+                print(f"📥 从checkpoint恢复: {resume_from}")
+                from peft import PeftModel
+                self.model = PeftModel.from_pretrained(
+                    self.model,
+                    resume_from,
+                    is_trainable=True
+                )
+                print(f"✅ LoRA权重已从checkpoint恢复")
+            else:
+                # 创建新的LoRA
+                lora_config = LoraConfig(
+                    r=self.config['lora_rank'],
+                    lora_alpha=self.config['lora_alpha'],
+                    target_modules=self.config['lora_target_modules'].split(','),
+                    lora_dropout=self.config['lora_dropout'],
+                    bias="none",
+                    task_type="CAUSAL_LM"
+                )
+                self.model = get_peft_model(self.model, lora_config)
+                print(f"✅ LoRA应用完成（新建）")
+
             self.model.print_trainable_parameters()
 
     async def train_step(self, step: int) -> Dict:
@@ -247,15 +262,17 @@ class GRPOTrainer:
                     temperature=self.config['generation_config']['temperature']
                 )
 
-                workflow_code = result['workflow_code']
+                # 获取完整的workflow_spec (包含prompts和graph_code)
+                workflow_spec = result
 
-                # 计算log概率（旧策略）
-                log_prob = await self._compute_log_prob(problem, workflow_code, problem_type)
+                # 计算log概率（旧策略）- 使用graph_code计算
+                graph_code = workflow_spec.get('graph_code', '')
+                log_prob = await self._compute_log_prob(problem, graph_code, problem_type)
 
                 # 执行工作流
                 try:
                     answer, cost, metadata = await self.executor.execute_workflow(
-                        workflow_code=workflow_code,
+                        workflow_spec=workflow_spec,
                         problem=problem,
                         problem_type=problem_type,
                         entry_point=sample.get('entry_point', '')
@@ -297,7 +314,7 @@ class GRPOTrainer:
                     reward = -10.0
                     correctness_scores.append(-10.0)
 
-                group_workflows.append(workflow_code)
+                group_workflows.append(graph_code)
                 group_answers.append(answer)
                 group_rewards.append(reward)
                 group_log_probs.append(log_prob)
@@ -495,6 +512,112 @@ class GRPOTrainer:
 
         return log_prob
 
+    async def evaluate(self, split="test"):
+        """
+        在测试集/验证集上评估模型 - 评估全部样本
+
+        Args:
+            split: "test" 或 "val"
+
+        Returns:
+            eval_metrics: 评估指标字典
+        """
+        print(f"\n{'=' * 60}")
+        print(f"📊 评估模型 (数据集: {split}) - 完整评估")
+        print(f"{'=' * 60}")
+
+        # 获取所有评估数据 (不是采样batch,而是获取全部数据)
+        if split == "test":
+            all_data = self.data_manager.test_data
+        elif split == "val":
+            all_data = self.data_manager.val_data
+        else:
+            all_data = self.data_manager.train_data
+
+        # 合并所有类型的数据到一个列表
+        all_samples = []
+        for problem_type, samples in all_data.items():
+            all_samples.extend(samples)
+
+        # 随机采样50个样本进行评估 (提高评估速度)
+        import random
+        eval_size = min(50, len(all_samples))
+        sampled_samples = random.sample(all_samples, eval_size) if len(all_samples) > eval_size else all_samples
+
+        print(f"📦 评估样本: {eval_size}/{len(all_samples)} 个 (采样评估)")
+
+        # 统计分布
+        type_counts = {}
+        for sample in sampled_samples:
+            ptype = sample.get('problem_type', 'unknown')
+            type_counts[ptype] = type_counts.get(ptype, 0) + 1
+        print(f"📊 数据分布: {type_counts}")
+
+        # 生成和评估 (每个问题只生成1个工作流,加快评估速度)
+        correctness_scores = []
+
+        self.model.eval()  # 设置为评估模式
+
+        from tqdm import tqdm
+        for sample in tqdm(sampled_samples, desc=f"评估{split}集"):
+            problem = sample['problem']
+            ground_truth = sample['ground_truth']
+            problem_type = sample['problem_type']
+
+            try:
+                # 生成工作流 (temperature=0更确定性)
+                result = self.generator.generate_workflow(
+                    problem=problem,
+                    problem_type=problem_type,
+                    temperature=0.1
+                )
+
+                # 获取完整的workflow_spec (包含prompts和graph_code)
+                workflow_spec = result
+
+                # 执行工作流
+                answer, cost, metadata = await self.executor.execute_workflow(
+                    workflow_spec=workflow_spec,
+                    problem=problem,
+                    problem_type=problem_type,
+                    entry_point=sample.get('entry_point', '')
+                )
+
+                # 计算正确性
+                if metadata['success']:
+                    correctness = self.reward_computer._compute_correctness_reward(
+                        prediction=answer,
+                        ground_truth=ground_truth,
+                        problem_type=problem_type
+                    )
+                else:
+                    correctness = -10.0
+
+                correctness_scores.append(correctness)
+
+            except Exception as e:
+                print(f"  ⚠️  评估错误: {type(e).__name__}: {e}")
+                correctness_scores.append(-10.0)
+
+        self.model.train()  # 恢复训练模式
+
+        # 计算评估指标
+        num_correct = sum(1 for score in correctness_scores if score >= 5.0)
+        num_total = len(correctness_scores)
+        accuracy = (num_correct / num_total * 100) if num_total > 0 else 0.0
+        avg_correctness = np.mean(correctness_scores) if correctness_scores else 0.0
+
+        eval_metrics = {
+            f"{split}/accuracy": accuracy,
+            f"{split}/avg_correctness_score": avg_correctness,
+            f"{split}/num_correct": num_correct,
+            f"{split}/num_total": num_total
+        }
+
+        print(f"\n🎯 {split.upper()}集准确率: {num_correct}/{num_total} = {accuracy:.1f}% (平均评分: {avg_correctness:.2f}/10.0)")
+
+        return eval_metrics
+
     async def train(self):
         """完整训练循环"""
         print("\n" + "=" * 60)
@@ -504,8 +627,20 @@ class GRPOTrainer:
         max_steps = self.config['max_steps']
         save_every = self.config.get('save_every', 50)
         log_every = self.config.get('log_every', 5)
+        eval_every = self.config.get('eval_every', 25)  # 每N步评估一次
+        start_step = self.config.get('start_step', 1)  # 默认从1开始，支持从checkpoint恢复
 
-        for step in range(1, max_steps + 1):
+        if start_step > 1:
+            print(f"♻️  从Step {start_step}恢复训练 (checkpoint: {self.config.get('resume_from_checkpoint')})")
+
+            # 从checkpoint恢复时，先评估一次测试集
+            print(f"\n{'=' * 60}")
+            print(f"📊 初始测试集评估 (Step {start_step - 1} checkpoint)")
+            print(f"{'=' * 60}")
+            initial_eval_metrics = await self.evaluate(split="test")
+            wandb.log({**initial_eval_metrics, "step": start_step - 1})
+
+        for step in range(start_step, max_steps + 1):
             print(f"\n{'=' * 60}")
             print(f"📍 Step {step}/{max_steps}")
             print(f"{'=' * 60}")
@@ -518,6 +653,12 @@ class GRPOTrainer:
                 print(f"\n📊 Metrics:")
                 for key, value in metrics.items():
                     print(f"  {key}: {value:.4f}" if isinstance(value, float) else f"  {key}: {value}")
+
+            # 测试集评估
+            if step % eval_every == 0:
+                eval_metrics = await self.evaluate(split="test")
+                # 记录到wandb
+                wandb.log(eval_metrics, step=step)
 
             # 保存检查点
             if step % save_every == 0:

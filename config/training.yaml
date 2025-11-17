@@ -1,13 +1,15 @@
 # AFlow + ROLL 集成训练配置
 
 # 实验配置
-exp_name: "aflow_grpo_online"
+exp_name: "aflow_grpo_hybrid_prompts"  # 新版本：混合格式（prompts + graph_code）
 output_dir: "checkpoints"
 log_dir: "logs"
-max_steps: 500  # 总训练步数
+max_steps: 500  # 总训练步数 (快速更新模式)
 save_every: 50  # 每N步保存一次
-eval_every: 25  # 每N步评估一次
+eval_every: 5  # 每N步评估一次（每5步测试）
 log_every: 5    # 每N步记录一次
+# resume_from_checkpoint: null  # 从头开始训练新版本
+# start_step: 1  # 从Step 1开始
 
 # GRPO算法配置
 adv_estimator: "grpo"
@@ -20,8 +22,8 @@ clip_range: 0.2
 gamma: 1.0                         # 折扣因子
 lambda_gae: 0.95                   # GAE lambda
 
-# Batch配置 - 方案A: 大幅增加显存使用 (目标: 60-70GB/80GB)
-rollout_batch_size: 20             # 每批问题数（实际样本=20*4=80）大幅增加
+# Batch配置 - 快速更新模式: 每batch后立即更新
+rollout_batch_size: 4              # 每批问题数 (快速更新: 每16个工作流样本更新一次)
 prompt_max_length: 3072            # 增加序列长度
 response_max_length: 5120          # 增加输出长度
 
@@ -45,12 +47,12 @@ warmup_steps: 50
 bf16: true
 gradient_checkpointing: false      # 与ZeRO-3冲突时禁用
 
-# GPU配置
-device_mapping: [0, 1]             # 逻辑设备0,1（CUDA_VISIBLE_DEVICES设置后对应物理GPU 2-3）
-physical_gpus: [2, 3]              # 实际使用的物理GPU
+# GPU配置 - 单GPU模式
+device_mapping: [0]                # 逻辑设备0（CUDA_VISIBLE_DEVICES=2后对应物理GPU 2）
+physical_gpus: [2]                 # 实际使用的物理GPU 2
 protected_pids: [3819483]          # 受保护的进程ID
-num_gpus: 2
-world_size: 2
+num_gpus: 1                        # 单GPU训练
+world_size: 1                      # 单GPU world size
 
 # 数据集配置
 data_dir: "data"
@@ -80,8 +82,8 @@ reward_weights:
 
 # 监控配置
 use_wandb: true
-wandb_project: "aflow_rl_optimization"
-wandb_entity: null  # 你的wandb用户名
+wandb_project: "agent-prompt"      # 新项目名称
+wandb_entity: "yao110002-sdfsdfsdfsdf-com"  # wandb用户名
 
 # 生成配置
 generation_config:

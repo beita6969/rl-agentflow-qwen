@@ -81,7 +81,7 @@ class AFlowExecutor:
 
     async def execute_workflow(
         self,
-        workflow_code: str,
+        workflow_spec: Dict,
         problem: str,
         problem_type: str = "math",
         **kwargs
@@ -90,7 +90,7 @@ class AFlowExecutor:
         执行工作流
 
         Args:
-            workflow_code: RL模型生成的Workflow类代码
+            workflow_spec: RL模型生成的工作流规范 {"prompts": {...}, "graph_code": "..."}
             problem: 问题文本
             problem_type: 问题类型
             **kwargs: 其他参数（如entry_point for code）
@@ -102,8 +102,16 @@ class AFlowExecutor:
         start_time = time.time()
 
         try:
+            # 提取prompts和graph_code
+            prompts = workflow_spec.get("prompts", {})
+            graph_code = workflow_spec.get("graph_code", "")
+
+            print(f"🔧 工作流规范:")
+            print(f"  Prompts: {list(prompts.keys())}")
+            print(f"  Graph code length: {len(graph_code)} chars")
+
             # 创建临时工作流模块
-            workflow_class = self._create_workflow_class(workflow_code, problem_type)
+            workflow_class = self._create_workflow_class(graph_code, problem_type)
 
             # 实例化工作流
             llm_config = self._get_llm_config()
@@ -119,6 +127,9 @@ class AFlowExecutor:
                     llm_config=llm_config,
                     dataset=problem_type
                 )
+                # 注入prompts（关键步骤！）
+                workflow.prompts = prompts
+                print(f"✅ 成功注入prompts到workflow实例")
             except Exception as e:
                 # 工作流实例化失败，使用fallback
                 print(f"⚠️  工作流实例化失败: {e}")
@@ -131,6 +142,8 @@ class AFlowExecutor:
                     llm_config=llm_config,
                     dataset=problem_type
                 )
+                # 也要注入prompts到fallback
+                workflow.prompts = prompts
 
             # 执行（带超时）
             # 尝试传入entry_point（code问题需要），如果失败则降级为只传problem
